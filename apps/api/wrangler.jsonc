@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "song-world-cup",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-20",
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "AUTH_MODE": "mock"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "song-world-cup",
+      "database_id": "a8b2beb8-a21e-4d59-a014-7bf2cde36ea5",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TOURNAMENT_COORDINATOR",
+        "class_name": "TournamentCoordinator"
+      }
+    ]
+  },
+  "exports": {
+    "TournamentCoordinator": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "EVENT_QUEUE",
+        "queue": "song-world-cup-events"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "song-world-cup-events",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
+  }
+}

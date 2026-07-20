@@ -1,0 +1,24 @@
+{
+  "name": "song-world-cup",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @song-world-cup/api --filter @song-world-cup/web dev",
+    "build": "pnpm --filter @song-world-cup/domain build && pnpm --filter @song-world-cup/web build && pnpm --filter @song-world-cup/api build",
+    "deploy": "pnpm build && pnpm --filter @song-world-cup/api deploy",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test && pnpm test:public-access",
+    "test:public-access": "bash scripts/test-public-access.sh",
+    "test:e2e": "playwright test",
+    "public:start": "bash scripts/start-public.sh",
+    "public:service:install": "bash scripts/install-public-access-service.sh",
+    "public:refresh": "bash scripts/refresh-public-access.sh",
+    "public:verify-cn": "bash scripts/verify-public-access-cn.sh",
+    "db:migrate:local": "pnpm --filter @song-world-cup/api db:migrate:local",
+    "db:seed:e2e": "pnpm --filter @song-world-cup/api exec wrangler d1 execute song-world-cup --local --file ../../e2e/fixtures/seed.sql"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
