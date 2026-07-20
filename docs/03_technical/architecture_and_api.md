@@ -28,7 +28,7 @@
                  → 原 D1 / Durable Objects / Queues
 ```
 
-中转代理只允许访问配置中的固定生产 origin，默认监听 `127.0.0.1`；`/__public-access/health` 同时返回本次随机 `bootId` 并实时请求生产 `/api/health`，启动脚本只有在公网响应与当前 `bootId` 一致时才接受入口。页面和 `/api/*` 继续由同一个生产 Worker 处理，因此赛事令牌、编辑租约、版本、分享和异步事件仍只有一份权威状态。
+中转代理只允许访问配置中的固定生产 origin，默认监听 `127.0.0.1`；`/__public-access/health` 同时返回本次随机 `bootId` 并实时请求生产 `/api/health`，启动脚本只有在公网响应与当前 `bootId` 一致时才接受入口。代理使用可替换的 Undici 环境代理连接池；上游网络请求异常时丢弃旧连接池并重新读取当前 `HTTP_PROXY / HTTPS_PROXY / NO_PROXY`。`GET / HEAD / OPTIONS` 最多自动重试一次，`POST / PATCH / DELETE` 等写请求只重建后续请求使用的连接池、不自动重放本次请求，避免重复业务写入。页面和 `/api/*` 继续由同一个生产 Worker 处理，因此赛事令牌、编辑租约、版本、分享和异步事件仍只有一份权威状态。
 
 该入口使用 Pinggy 免费 HTTPS 隧道，只用于临时访问和验收：地址与进程绑定，约 60 分钟后失效，本机休眠、网络/代理中断或隧道退出都会终止入口。它不替代中国大陆备案、境内部署或可用性 SLA；恢复链接、IndexedDB、Service Worker 和分享二维码都受浏览器 origin 约束，地址变化后不能沿用旧入口生成的完整链接。
 

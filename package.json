@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"
+  },
+  "dependencies": {
+    "undici": "^7.28.0"
   }
 }

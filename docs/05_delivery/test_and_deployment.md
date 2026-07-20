@@ -28,7 +28,7 @@
 ## 当前可执行验收
 
 - `pnpm test`：领域、Web 仓储/导出和 Worker 单元测试；
-- `pnpm test:public-access`：固定上游反向代理、启动健康检查和大陆探测结果判定测试；
+- `pnpm test:public-access`：固定上游反向代理、连接池失败自愈、安全方法重试/写方法不重放、启动健康检查和大陆探测结果判定测试；
 - `pnpm typecheck`：全部 TypeScript 工作区；
 - `pnpm build`：先构建共享包与 Vite，再执行包含静态资产、D1、Durable Object 和 Queue 绑定的 Wrangler dry-run；
 - `pnpm test:e2e`：在 Vite 生产预览中运行移动端 16 强至决赛主流程、离线选择与刷新、第二设备只读、主动分享、两类 PNG 下载、模拟登录、赛事认领与旧恢复链接失效、迁移页和后台。
@@ -51,3 +51,4 @@
 - 2026-07-20 网易云音乐导入已发布到生产环境，Cloudflare Worker 版本为 `46f6cdaf-4966-46ad-ad92-14ae712d3f67`。执行 `0011` 前已导出远端 D1 备份；迁移前后均保留 3 个快照与 3765 首歌曲，外键检查无异常。公网冒烟使用歌单 `14339440319` 成功导入并保存 6 首歌曲，Queue 已消费对应 `playlist_imported` 事件；验证后生产库共 4 个快照、3771 首歌曲。
 - 2026-07-20 中国大陆临时公网中转已完成真实验收。非交互启动生成 Pinggy HTTPS 地址后，生产健康检查在成都、北京、深圳、天津、广州 5 个大陆节点均返回匹配本次 `bootId` 的 200；真实首页在广州、深圳、北京、天津、成都 5 个大陆节点均返回 200 和“歌曲世界杯”标题，其中深圳首页节点位于 Chinanet Backbone。可复核的 Globalping 测量为[健康检查 `2lAEEAf2qCL2lYBng00020nJE`](https://globalping.io?measurement=2lAEEAf2qCL2lYBng00020nJE)和[首页 `2olnRTNlaP2t6CU3u00020nJE`](https://globalping.io?measurement=2olnRTNlaP2t6CU3u00020nJE)。验收 URL 属于约 60 分钟有效的免费临时地址，当前运行地址以 `.public-access/public-url.txt` 为准。
 - 2026-07-20 每小时公网入口邮件链路已完成验收：用户级 LaunchAgent 在刷新命令退出后继续托管代理与隧道，连续两次刷新会停止旧管理进程并生成不同 URL；最新一轮大陆健康检查在宁波、深圳通过，首页在北京、广州、上海、天津、深圳通过，对应 [Globalping 健康测量](https://globalping.io?measurement=2fL142gzoQGNPoq3b00020nKG)和[首页测量](https://globalping.io?measurement=2TCfhnyxfJjKrFFCR00020nKG)。Codex 每小时自动化已启用，Gmail 首封最新地址邮件发送并回读成功。
+- 2026-07-20 长驻公网回源改为可替换的 Undici 环境代理连接池，避免系统代理短暂中断后旧连接池持续返回 502；安全方法失败后换池补试一次，写方法换池但不自动重放。领域 30 项、Web 10 项、Worker 17 项和公网中转 10 项测试通过，类型检查与生产构建通过；重装 LaunchAgent 后，大陆健康检查在北京、长沙、广州、深圳、天津 5 个城市通过，首页在北京、广州、深圳、长沙 4 个城市通过，对应 [Globalping 健康测量](https://globalping.io?measurement=222QTgbxwauzBzSP100020nL2)和[首页测量](https://globalping.io?measurement=2ZSkjd3kT1zVWGFCf00020nL2)。

@@ -1,6 +1,7 @@
 import http from "node:http";
 import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
+import { EnvHttpProxyAgent, fetch as undiciFetch } from "undici";
 
 const DEFAULT_UPSTREAM_ORIGIN = "https://song-world-cup.baituola-song-world-cup.workers.dev";
 const HOP_BY_HOP_HEADERS = new Set([
@@ -15,6 +16,86 @@ const HOP_BY_HOP_HEADERS = new Set([
   "transfer-encoding",
   "upgrade",
 ]);
+const SAFE_RETRY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function requestMethod(input, init) {
+  if (init?.method) return String(init.method).toUpperCase();
+  if (typeof Request !== "undefined" && input instanceof Request) return input.method.toUpperCase();
+  return "GET";
+}
+
+function requestWasAborted(input, init) {
+  if (init?.signal?.aborted) return true;
+  return typeof Request !== "undefined" && input instanceof Request && input.signal.aborted;
+}
+
+async function discardDispatcher(dispatcher, logger) {
+  try {
+    if (typeof dispatcher.destroy === "function") {
+      await dispatcher.destroy();
+    } else if (typeof dispatcher.close === "function") {
+      await dispatcher.close();
+    }
+  } catch (error) {
+    logger?.warn?.("[public-access] 丢弃失效的上游连接池时出错", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export function createRecoveringFetch({
+  fetchImpl = undiciFetch,
+  createDispatcher = () => new EnvHttpProxyAgent(),
+  logger,
+  maxSafeAttempts = 2,
+} = {}) {
+  if (typeof fetchImpl !== "function") throw new TypeError("fetchImpl 必须是函数");
+  if (typeof createDispatcher !== "function") throw new TypeError("createDispatcher 必须是函数");
+  if (!Number.isInteger(maxSafeAttempts) || maxSafeAttempts < 1) {
+    throw new TypeError("maxSafeAttempts 必须是正整数");
+  }
+
+  let dispatcher = createDispatcher();
+  let closed = false;
+
+  async function replaceDispatcher(failedDispatcher, error) {
+    if (dispatcher !== failedDispatcher) return;
+    dispatcher = createDispatcher();
+    logger?.warn?.("[public-access] 上游连接失败，已重建代理连接池", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    await discardDispatcher(failedDispatcher, logger);
+  }
+
+  const recoveringFetch = async (input, init = {}) => {
+    if (closed) throw new Error("上游 fetch 已关闭");
+    const method = requestMethod(input, init);
+    const attempts = SAFE_RETRY_METHODS.has(method) ? maxSafeAttempts : 1;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const activeDispatcher = dispatcher;
+      try {
+        return await fetchImpl(input, { ...init, dispatcher: activeDispatcher });
+      } catch (error) {
+        if (requestWasAborted(input, init)) throw error;
+        await replaceDispatcher(activeDispatcher, error);
+        if (attempt === attempts) throw error;
+      }
+    }
+
+    throw new Error("上游请求未执行");
+  };
+
+  recoveringFetch.close = async () => {
+    if (closed) return;
+    closed = true;
+    const activeDispatcher = dispatcher;
+    dispatcher = null;
+    if (typeof activeDispatcher?.close === "function") await activeDispatcher.close();
+  };
+
+  return recoveringFetch;
+}
 
 function jsonResponse(response, body, status = 200) {
   const payload = Buffer.from(JSON.stringify(body));
@@ -187,8 +268,12 @@ async function main() {
   const upstreamOrigin = process.env.UPSTREAM_ORIGIN ?? DEFAULT_UPSTREAM_ORIGIN;
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("PUBLIC_PROXY_PORT 无效");
 
-  const server = createPublicAccessProxy({ upstreamOrigin, bootId });
-  const shutdown = () => server.close(() => process.exit(0));
+  const recoveringFetch = createRecoveringFetch({ logger: console });
+  const server = createPublicAccessProxy({ upstreamOrigin, bootId, fetchImpl: recoveringFetch });
+  const shutdown = () => server.close(async () => {
+    await recoveringFetch.close();
+    process.exit(0);
+  });
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);
 

@@ -94,7 +94,6 @@ start_proxy() {
   local -a command
   command=("$NODE_BIN")
   if [[ -n "$proxy" ]]; then
-    command+=(--use-env-proxy)
     HTTP_PROXY="$proxy" HTTPS_PROXY="$proxy" NO_PROXY="127.0.0.1,localhost,::1" \
       PUBLIC_PROXY_HOST="$PUBLIC_PROXY_HOST" \
       PUBLIC_PROXY_PORT="$PUBLIC_PROXY_PORT" \

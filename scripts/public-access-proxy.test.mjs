@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import { after, before, test } from "node:test";
-import { createPublicAccessProxy } from "./public-access-proxy.mjs";
+import * as publicAccessProxy from "./public-access-proxy.mjs";
+
+const { createPublicAccessProxy, createRecoveringFetch } = publicAccessProxy;
 
 let upstreamServer;
 let proxyServer;
@@ -22,6 +24,66 @@ function listen(server) {
 function close(server) {
   return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 }
+
+test("安全请求在网络错误后重建连接池并重试", async () => {
+  assert.equal(typeof createRecoveringFetch, "function");
+
+  const closedDispatchers = [];
+  const dispatchers = [
+    { id: "first", close: async () => closedDispatchers.push("first") },
+    { id: "second", close: async () => closedDispatchers.push("second") },
+  ];
+  const usedDispatchers = [];
+  let nextDispatcher = 0;
+  const recoveringFetch = createRecoveringFetch({
+    createDispatcher: () => dispatchers[nextDispatcher++],
+    fetchImpl: async (_input, init) => {
+      usedDispatchers.push(init.dispatcher.id);
+      if (usedDispatchers.length === 1) throw new TypeError("fetch failed");
+      return new Response("ok", { status: 200 });
+    },
+  });
+
+  const response = await recoveringFetch("https://upstream.example.test/health", { method: "GET" });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(usedDispatchers, ["first", "second"]);
+  assert.deepEqual(closedDispatchers, ["first"]);
+  await recoveringFetch.close();
+  assert.deepEqual(closedDispatchers, ["first", "second"]);
+});
+
+test("写请求失败时重建连接池但不自动重放请求体", async () => {
+  assert.equal(typeof createRecoveringFetch, "function");
+
+  const closedDispatchers = [];
+  const dispatchers = [
+    { id: "first", close: async () => closedDispatchers.push("first") },
+    { id: "second", close: async () => closedDispatchers.push("second") },
+  ];
+  const usedDispatchers = [];
+  let nextDispatcher = 0;
+  const recoveringFetch = createRecoveringFetch({
+    createDispatcher: () => dispatchers[nextDispatcher++],
+    fetchImpl: async (_input, init) => {
+      usedDispatchers.push(init.dispatcher.id);
+      throw new TypeError("fetch failed");
+    },
+  });
+
+  await assert.rejects(
+    recoveringFetch("https://upstream.example.test/tournaments", {
+      method: "POST",
+      body: JSON.stringify({ name: "test" }),
+    }),
+    /fetch failed/,
+  );
+
+  assert.deepEqual(usedDispatchers, ["first"]);
+  assert.deepEqual(closedDispatchers, ["first"]);
+  await recoveringFetch.close();
+  assert.deepEqual(closedDispatchers, ["first", "second"]);
+});
 
 before(async () => {
   upstreamServer = http.createServer(async (request, response) => {
