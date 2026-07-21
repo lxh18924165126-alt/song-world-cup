@@ -8,7 +8,7 @@
 
 ## 实际工作区
 
-- `apps/web`：React + TypeScript + Vite 前端，承载导入、歌曲检查、赛事设置、抽签预览、逐场选胜、专属决赛舞台、对阵总览、结果分享、本地 PNG、我的赛事、迁移、后台、IndexedDB 草稿/赛事/事件队列和离线壳。
+- `apps/web`：React + TypeScript + Vite 前端，承载导入、歌曲检查、赛事设置、抽签预览、虚拟化固定签表画布、逐场选胜与关键舞台、对阵总览、结果分享、本地 PNG、我的赛事、迁移、后台、IndexedDB 草稿/赛事/事件队列和离线壳。
 - `apps/api`：Cloudflare Worker API、D1 迁移、Durable Object 与 Queue，承载 QQ 音乐/网易云音乐公开歌单解析、不可变快照、云端草稿、赛事状态机、单设备编辑协调、账号与所有权、分享、后台和应用事件。
 - `packages/domain`：前后端共享的歌单、快照、赛事草稿、签表和比赛状态机类型与纯领域函数。
 - `scripts/public-access-*`：中国大陆临时公网中转、LaunchAgent 托管、定时换址和大陆探测；根依赖 `undici` 为长驻回源进程提供可替换的环境代理连接池。
@@ -25,6 +25,9 @@
 - `pnpm test:public-access`：验证生产站反向代理、上游连接池自愈、安全重试边界和大陆探测判定逻辑。
 - `pnpm test:e2e`：运行 Playwright 手机端主流程、离线、编辑权、分享、导出、登录与后台测试。
 - `pnpm build`：构建共享包、前端，并对 Worker 执行部署前 dry-run 打包。
+- `pnpm local:prepare`：准备 `/sowocu/` Windows 本机部署产物，将其隔离到 `.local-server/web-dist/`，并生成随机后台令牌与独立 Wrangler 状态。
+- `pnpm local:start` / `pnpm local:stop`：后台启动或停止本机 Worker。
+- `pnpm local:service:install`：安装并验证自动启动的本机 Worker Windows 服务。
 - `pnpm public:start`：启动现有生产站的本机反向代理与 Pinggy HTTPS 临时公网入口。
 - `pnpm public:service:install`：安装/更新当前用户的 macOS LaunchAgent，为无人值守入口提供独立进程托管。
 - `pnpm public:refresh`：安全替换旧入口，在后台保持新隧道并等待公网健康检查通过，供无人值守任务调用。
@@ -38,6 +41,7 @@
 - [赛事离线缓存与顺序同步](features/offline-tournament-sync.md)
 - [单设备编辑租约与接管](features/edit-lease-and-takeover.md)
 - [完赛结果、赛后分享与本地导出](features/results-share-and-export.md)
+- [Windows 本机部署与 `/sowocu` 公网路由](local-windows-deployment.md)
 - [账号、我的赛事与迁移认领](features/account-and-migration.md)
 - [运营后台与应用事件](features/admin-and-events.md)
 - [中国大陆临时公网中转](features/public-access-relay.md)

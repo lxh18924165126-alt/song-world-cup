@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .wrangler/
+.local-server/
+apps/api/.dev.vars
 .public-access/
 playwright-report/
 test-results/

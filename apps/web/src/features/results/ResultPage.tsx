@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Cloud, Download, Link2, RefreshCw, RotateCcw, Share2, WifiOff } from "lucide-react";
+import { AlertTriangle, Download, Link2, RefreshCw, RotateCcw, Share2, WifiOff } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import type { CloudTournament, SnapshotSong } from "@song-world-cup/domain";
+import { appPath } from "../../app/paths";
 import { AppHeader } from "../../components/AppHeader";
 import {
   flushTournamentEvents,
@@ -10,7 +11,7 @@ import {
   type LocalTournamentPayload,
 } from "../tournament/repository";
 import { closeShare, getShareStatus, openShare, resetShare, type ShareStatus } from "./api";
-import { downloadBracketPng, downloadResultPoster, type BracketExportQuality } from "./export";
+import { downloadBracketPng, type BracketExportQuality } from "./export";
 import { ResultSummary } from "./ResultSummary";
 
 type ResultSyncState = "syncing" | "synced" | "failed" | "offline";
@@ -97,7 +98,7 @@ export function ResultPage() {
   if (loading) return <div className="center-state">正在整理最终赛果…</div>;
   if (!tournament) return <div className="center-state"><p>{error ?? "赛果不可用"}</p><button className="secondary-button" onClick={() => navigate("/")} type="button">返回首页</button></div>;
   if (tournament.progress.status !== "finished") return <Navigate replace to={`/t/${id}/play${window.location.hash}`} />;
-  const shareUrl = share.sharePath ? new URL(share.sharePath, window.location.origin).href : null;
+  const shareUrl = share.sharePath ? new URL(appPath(share.sharePath), window.location.origin).href : null;
 
   async function updateShare(action: "open" | "close" | "reset") {
     setBusy(action);
@@ -113,21 +114,28 @@ export function ResultPage() {
 
   async function copyShare() {
     if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
-    setBusy("copied");
-    window.setTimeout(() => setBusy(null), 1_200);
-  }
-
-  async function exportImage(kind: "bracket" | "poster") {
-    setBusy(kind);
     setError(null);
     try {
-      if (kind === "poster") {
-        if (!shareUrl) throw new Error("请先开放赛后分享，以便在海报中生成只读二维码");
-        await downloadResultPoster(tournament!, songs, shareUrl);
-      } else {
-        await downloadBracketPng(tournament!, songs, quality);
-      }
+      await copyText(shareUrl);
+      setBusy("copied");
+      window.setTimeout(() => setBusy(null), 1_200);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "复制分享链接失败");
+    }
+  }
+
+  async function exportBracketImage() {
+    setBusy("bracket");
+    setError(null);
+    try {
+      if (syncState !== "synced") throw new Error("请先完成云端同步，再生成带公开二维码的对阵图");
+      const publicShare = share.open && share.sharePath
+        ? share
+        : await openShare(id, token);
+      if (!publicShare.sharePath) throw new Error("公开赛果链接生成失败");
+      setShare(publicShare);
+      const publicShareUrl = new URL(appPath(publicShare.sharePath), window.location.origin).href;
+      await downloadBracketPng(tournament!, songs, quality, publicShareUrl);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "PNG 生成失败");
     } finally {
@@ -136,7 +144,7 @@ export function ResultPage() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell result-shell">
       <AppHeader title="最终赛果" />
       <main className="content-column result-content">
         <ResultSummary tournament={tournament} songs={songs} />
@@ -152,15 +160,37 @@ export function ResultPage() {
             <button type="button" disabled={busy !== null || syncState !== "synced"} onClick={() => void updateShare(share.open ? "close" : "open")}>{share.open ? "关闭分享" : "开放分享"}</button>
           </div>
           {shareUrl ? <div className="share-link-row"><code>{shareUrl}</code><button type="button" onClick={() => void copyShare()}><Link2 aria-hidden="true" />{busy === "copied" ? "已复制" : "复制"}</button><button type="button" onClick={() => void updateShare("reset")}><RotateCcw aria-hidden="true" />重置</button></div> : null}
-          <div className="export-grid">
-            <article><h3>纯对阵图 PNG</h3><p>固定暗黑背景，不包含页面装饰。</p><label>清晰度<select value={quality} onChange={(event) => setQuality(event.target.value as BracketExportQuality)}><option value="standard">通用高清版</option><option value="original" disabled={window.innerWidth <= 720}>桌面原始超清版</option></select></label><button type="button" disabled={busy !== null} onClick={() => void exportImage("bracket")}><Download aria-hidden="true" />{busy === "bracket" ? "生成中…" : "下载对阵图"}</button></article>
-            <article><h3>9:16 结果海报</h3><p>1080×1920，默认包含只读分享二维码。</p><button type="button" disabled={busy !== null || !shareUrl} onClick={() => void exportImage("poster")}><Download aria-hidden="true" />{busy === "poster" ? "生成中…" : shareUrl ? "下载结果海报" : "开放分享后生成"}</button></article>
+          <div className="export-grid single">
+            <article><h3>超大画布对阵图 PNG</h3><label className="export-quality-field"><span>清晰度</span><select value={quality} onChange={(event) => setQuality(event.target.value as BracketExportQuality)}><option value="standard">通用高清版</option><option value="original" disabled={window.innerWidth <= 720}>桌面原始超清版</option></select></label><button type="button" disabled={busy !== null || syncState !== "synced"} onClick={() => void exportBracketImage()}><Download aria-hidden="true" />{busy === "bracket" ? "正在公开并生成…" : "下载对阵图"}</button></article>
           </div>
         </section>
         {error ? <p className="form-error setup-error" role="alert">{error}</p> : null}
       </main>
     </div>
   );
+}
+
+async function copyText(text: string): Promise<void> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // HTTP、权限策略或浏览器设置可能禁用 Clipboard API，继续使用选区复制回退。
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.readOnly = true;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.opacity = "0";
+  document.body.append(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("复制失败，请手动选择并复制链接");
 }
 
 function ResultSyncBanner({
@@ -173,7 +203,7 @@ function ResultSyncBanner({
   onRetry: () => void;
 }) {
   if (state === "synced") {
-    return <div className="sync-banner synced"><Cloud aria-hidden="true" /><span>云端进度已同步</span></div>;
+    return null;
   }
   if (state === "offline") {
     return <div className="sync-banner offline"><WifiOff aria-hidden="true" /><span>赛果已保存在本机，联网后可同步云端</span><button type="button" onClick={onRetry}><RefreshCw aria-hidden="true" />重试云端同步</button></div>;

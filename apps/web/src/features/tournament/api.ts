@@ -1,4 +1,5 @@
 import type { CloudTournament, SnapshotSong } from "@song-world-cup/domain";
+import { appPath } from "../../app/paths";
 import { getTournamentDeviceId } from "./device";
 import { sessionHeaders } from "../auth/session";
 
@@ -173,7 +174,7 @@ export async function branchTournament(
 }
 
 async function request<T>(url: string, init: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await fetch(appPath(url), init);
   const body = await response.json().catch(() => ({})) as T | ErrorPayload;
   if (!response.ok) {
     const error = (body as ErrorPayload).error;

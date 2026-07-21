@@ -1,3 +1,5 @@
+import { appPath } from "../../app/paths";
+
 export interface AdminOverview {
   metrics: { snapshotsToday: number; inProgress: number; finished: number; openShares: number; accounts: number };
   flags: Array<{ key: string; enabled: boolean; updatedAt: string }>;
@@ -18,7 +20,7 @@ export async function updateFeatureFlag(token: string, key: string, enabled: boo
 }
 
 async function request<T>(url: string, token: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(appPath(url), {
     ...init,
     headers: { ...init.headers, "X-Admin-Token": token },
   });

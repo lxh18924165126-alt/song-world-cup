@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  CloudDownload,
-  Dice5,
-  GitBranch,
   Lock,
-  MousePointerClick,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -181,16 +177,6 @@ export function SetupPage() {
             <p className="scale-note">当前已选 {draft.selectedSongIds.length} 首歌曲，签表为 {bracketSize} 位。</p>
           </section>
 
-          <section className="surface setup-panel" aria-labelledby="features-title">
-            <div className="section-label" id="features-title">核心功能</div>
-            <div className="setup-features">
-              <SetupFeature icon={<Dice5 />} title="随机抽签" text="公平分组，惊喜对决" />
-              <SetupFeature icon={<GitBranch />} title="自动轮空" text="快速推进，高效赛程" />
-              <SetupFeature icon={<CloudDownload />} title="本地保存 + 恢复链接" text="刷新不丢，随时继续" />
-              <SetupFeature icon={<MousePointerClick />} title="点按打开 / 长按试听" text="选择与媒体操作分离" />
-            </div>
-          </section>
-
           {error ? <p className="form-error setup-error" role="alert">{error}</p> : null}
           <button className="primary-button setup-continue" type="button" onClick={() => void continueToDraw()} disabled={submitting}>
             <span>{submitting ? "正在创建云端草稿…" : "进入抽签预览"}</span>
@@ -200,14 +186,5 @@ export function SetupPage() {
         </div>
       </main>
     </div>
-  );
-}
-
-function SetupFeature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <article>
-      <span aria-hidden="true">{icon}</span>
-      <div><strong>{title}</strong><p>{text}</p></div>
-    </article>
   );
 }

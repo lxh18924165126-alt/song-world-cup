@@ -4,6 +4,7 @@ import {
   type CloudTournament,
   type SnapshotSong,
 } from "@song-world-cup/domain";
+import { createUuid } from "../../app/id";
 import {
   database,
   type CachedTournamentRecord,
@@ -264,7 +265,7 @@ async function enqueueEvent(
   }
   const sequence = record.nextSequence;
   const base = {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     tournamentId,
     sequence,
     createdAt: new Date().toISOString(),

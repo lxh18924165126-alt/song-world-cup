@@ -30,7 +30,15 @@
 
 中转代理只允许访问配置中的固定生产 origin，默认监听 `127.0.0.1`；`/__public-access/health` 同时返回本次随机 `bootId` 并实时请求生产 `/api/health`，启动脚本只有在公网响应与当前 `bootId` 一致时才接受入口。代理使用可替换的 Undici 环境代理连接池；上游网络请求异常时丢弃旧连接池并重新读取当前 `HTTP_PROXY / HTTPS_PROXY / NO_PROXY`。`GET / HEAD / OPTIONS` 最多自动重试一次，`POST / PATCH / DELETE` 等写请求只重建后续请求使用的连接池、不自动重放本次请求，避免重复业务写入。页面和 `/api/*` 继续由同一个生产 Worker 处理，因此赛事令牌、编辑租约、版本、分享和异步事件仍只有一份权威状态。
 
-该入口使用 Pinggy 免费 HTTPS 隧道，只用于临时访问和验收：地址与进程绑定，约 60 分钟后失效，本机休眠、网络/代理中断或隧道退出都会终止入口。它不替代中国大陆备案、境内部署或可用性 SLA；恢复链接、IndexedDB、Service Worker 和分享二维码都受浏览器 origin 约束，地址变化后不能沿用旧入口生成的完整链接。
+该入口使用 Pinggy 免费 HTTPS 隧道，只用于临时访问和验收：地址与进程绑定，约 60 分钟后失效，本机休眠、网络/代理中断或隧道退出都会终止入口。它不替代中国大陆备案、境内部署或可用性 SLA；恢复链接、IndexedDB、Service Worker 和分享链接都受浏览器 origin 约束，地址变化后不能沿用旧入口生成的完整链接。
+
+## Windows 本机固定公网入口
+
+当前 Windows 主机还提供一套与 Cloudflare 生产数据隔离的本机部署：Vite 以 `/sowocu/` 为公开基路径构建，自动启动的 `song-world-cup-local-server` Windows 服务通过 Wrangler 本地运行时在 `127.0.0.1:8787` 承载同一 Worker、静态资产、D1、Durable Object 与 Queue；`local-nginx` 同时监听 `6498` 和 frpc 使用的 `9864`，把 `/sowocu/` 剥离后转发到 Worker 根路径。公网链路为 `14.22.85.30:6498 → frpc → 127.0.0.1:9864 → local-nginx → 127.0.0.1:8787`。
+
+Worker 不监听局域网地址，管理令牌随机生成并仅保存在 `.local-server/`；公网只开放网关中的 `/sowocu` 路由。浏览器侧的 Router、API、恢复链接、分享链接与 Service Worker 均从 Vite `BASE_URL` 计算前缀，根路径 Cloudflare 构建仍保持兼容。
+
+现有 frp 只提供 HTTP TCP 入口。`127.0.0.1` 在浏览器中属于可信回环上下文，Service Worker 可用；公网 IP 的 HTTP origin 不是安全上下文，Service Worker、离线壳和其他要求 HTTPS 的 Web 能力不可用，请勿通过该入口传输后台令牌或敏感生产数据。浏览器端草稿、设备、离线事件和 QQ JSONP 回调标识在该入口下以 `crypto.getRandomValues` 生成 RFC 4122 v4 UUID，不使用非加密随机数；安全上下文仍优先调用原生 `crypto.randomUUID`。正式公网使用需要在 frp 或其前置代理补充受信任的 HTTPS。
 
 ## API 轮廓
 - `POST /api/playlists/resolve`：识别平台并解析 QQ 音乐或网易云音乐公开歌单
@@ -56,7 +64,7 @@
 - `POST /api/tournaments/:id/reset-share-link`：重置分享链接
 - `GET /api/share/:token`：赛后只读数据
 
-分享记录由 `0005_tournament_shares.sql` 创建，默认不存在；只有完赛赛事的创建者主动开放后才生成随机令牌。重置会替换令牌，公共读取同时校验 `is_open = 1` 与赛事已完成。对阵图和 1080×1920 海报完全在浏览器 Canvas 生成，不经过 Worker。
+分享记录由 `0005_tournament_shares.sql` 创建，默认不存在；只有完赛赛事的创建者主动开放分享或下载带二维码的对阵图时才生成随机令牌。对阵图下载复用同一 `open-share` 契约静默开放只读分享，取得当前有效 `/share/:token` 后在浏览器本地生成二维码；重置会替换令牌，公共读取同时校验 `is_open = 1` 与赛事已完成。对阵图与二维码合成完全在浏览器 Canvas 生成，不上传图片、不经过 Worker 渲染。
 - `POST /api/migration/claim`：登录后迁移赛事
 - `POST /api/auth/mock`：本地或演示模式模拟微信 / QQ 登录
 - `GET /api/auth/:provider/start`：生成一次性 OAuth state 与正式授权地址

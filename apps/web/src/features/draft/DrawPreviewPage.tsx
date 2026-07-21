@@ -4,11 +4,8 @@ import {
   Check,
   Copy,
   Info,
-  Lock,
   Play,
   RefreshCw,
-  Scale,
-  Shuffle,
   Trophy,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -100,9 +97,6 @@ export function DrawPreviewPage() {
 
   const leftMatches = draft.draw.firstRound.filter((match) => match.side === "left");
   const rightMatches = draft.draw.firstRound.filter((match) => match.side === "right");
-  const leftByes = leftMatches.filter((match) => match.status === "auto_bye").length;
-  const rightByes = rightMatches.filter((match) => match.status === "auto_bye").length;
-
   return (
     <div className="app-shell">
       <AppHeader title="抽签预览" />
@@ -129,33 +123,12 @@ export function DrawPreviewPage() {
           </div>
         </section>
 
-        <section className="surface bracket-preview" aria-labelledby="bracket-title">
-          <div className="draw-section-heading"><h2 id="bracket-title">对阵预览</h2><span>共 {draft.draw.roundCount} 轮比赛</span></div>
-          <div className="bracket-stage" aria-label="左右赛区签表摘要">
-            <div className="zone left-zone"><strong>左赛区 {draft.draw.bracketSize / 2} 强</strong><BracketSteps size={draft.draw.bracketSize / 2} /></div>
-            <div className="final-cup"><span>决赛</span><Trophy aria-hidden="true" /></div>
-            <div className="zone right-zone"><strong>右赛区 {draft.draw.bracketSize / 2} 强</strong><BracketSteps size={draft.draw.bracketSize / 2} reverse /></div>
-          </div>
-          <div className="bye-summary">
-            <div><span>左赛区轮空</span><strong>{leftByes} 个</strong></div>
-            <div><span>右赛区轮空</span><strong>{rightByes} 个</strong></div>
-            <div><span>总轮空</span><strong>{draft.draw.byeCount} 个</strong></div>
-            <div><span>首轮有效对决</span><strong>{draft.draw.playableMatchCount} 场</strong></div>
-          </div>
-        </section>
-
         <section className="surface match-samples" aria-labelledby="sample-title">
           <div className="draw-section-heading"><h2 id="sample-title">首轮部分对阵示例</h2><span>每侧前 4 场</span></div>
           <div className="sample-columns">
             <MatchColumn matches={leftMatches.slice(0, 4)} songById={songById} side="left" />
             <MatchColumn matches={rightMatches.slice(0, 4)} songById={songById} side="right" />
           </div>
-        </section>
-
-        <section className="surface draw-rules" aria-label="抽签规则">
-          <Rule icon={<Shuffle />} title="完全随机" text="歌曲集合与签位按当前赛制随机生成。" />
-          <Rule icon={<Scale />} title="均衡轮空" text="轮空尽量均匀分布在左右赛区。" />
-          <Rule icon={<Lock />} title="开赛后不可重抽" text="正式开赛会锁定歌曲、签位和晋级路径。" />
         </section>
 
         {draft.scale !== "all" ? (
@@ -179,11 +152,6 @@ export function DrawPreviewPage() {
 
 function SummaryItem({ label, value, detail }: { label: string; value: string; detail: string }) {
   return <article><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
-}
-
-function BracketSteps({ size, reverse = false }: { size: number; reverse?: boolean }) {
-  const steps = [size, Math.max(size / 2, 1), Math.max(size / 4, 1)].map((value) => Math.round(value));
-  return <div className={reverse ? "bracket-steps reverse" : "bracket-steps"}>{steps.map((step, index) => <span key={`${step}-${index}`}>{step} 强</span>)}</div>;
 }
 
 function MatchColumn({
@@ -213,8 +181,4 @@ function SongName({ entrantId, songById }: { entrantId: string | null; songById:
   if (!entrantId) return <strong className="bye-label">轮空<small>BYE</small></strong>;
   const song = songById.get(entrantId);
   return <strong>{song?.title ?? "未知歌曲"}<small>{song?.artists.join(" / ") ?? ""}</small></strong>;
-}
-
-function Rule({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return <article><span aria-hidden="true">{icon}</span><div><strong>{title}</strong><p>{text}</p></div></article>;
 }

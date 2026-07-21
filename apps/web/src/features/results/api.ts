@@ -1,4 +1,5 @@
 import type { CloudTournament, SnapshotSong } from "@song-world-cup/domain";
+import { appPath } from "../../app/paths";
 import { TournamentRequestError } from "../tournament/api";
 import { sessionHeaders } from "../auth/session";
 
@@ -30,7 +31,7 @@ export function resetShare(tournamentId: string, token: string): Promise<ShareSt
 }
 
 export async function getPublicShare(shareToken: string): Promise<PublicSharePayload> {
-  const response = await fetch(`/api/share/${encodeURIComponent(shareToken)}`);
+  const response = await fetch(appPath(`/api/share/${encodeURIComponent(shareToken)}`));
   const body = await response.json().catch(() => ({})) as PublicSharePayload | { error?: { code?: string; message?: string } };
   if (!response.ok) {
     const error = (body as { error?: { code?: string; message?: string } }).error;
@@ -40,7 +41,7 @@ export async function getPublicShare(shareToken: string): Promise<PublicSharePay
 }
 
 async function request(url: string, token: string, method = "GET"): Promise<ShareStatus> {
-  const response = await fetch(url, { method, headers: { "X-Tournament-Token": token, ...sessionHeaders() } });
+  const response = await fetch(appPath(url), { method, headers: { "X-Tournament-Token": token, ...sessionHeaders() } });
   const body = await response.json().catch(() => ({})) as ShareStatus | { error?: { code?: string; message?: string } };
   if (!response.ok) {
     const error = (body as { error?: { code?: string; message?: string } }).error;

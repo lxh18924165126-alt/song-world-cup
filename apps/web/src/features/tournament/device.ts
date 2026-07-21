@@ -1,3 +1,5 @@
+import { createUuid } from "../../app/id";
+
 const DEVICE_ID_KEY = "song-world-cup-device-id";
 let memoryDeviceId: string | undefined;
 
@@ -8,7 +10,7 @@ export function getTournamentDeviceId(): string {
     memoryDeviceId = stored;
     return stored;
   }
-  memoryDeviceId = crypto.randomUUID();
+  memoryDeviceId = createUuid();
   if (typeof localStorage !== "undefined") localStorage.setItem(DEVICE_ID_KEY, memoryDeviceId);
   return memoryDeviceId;
 }

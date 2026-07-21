@@ -3,6 +3,7 @@ import type {
   SnapshotSong,
   TournamentScale,
 } from "@song-world-cup/domain";
+import { appPath } from "../../app/paths";
 
 export interface DraftPayload {
   draft: CloudTournamentDraft;
@@ -56,7 +57,7 @@ export async function redrawCloudDraft(
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await fetch(appPath(url), init);
   const body = await response.json().catch(() => ({})) as T | ErrorPayload;
   if (!response.ok) {
     const error = body as ErrorPayload;

@@ -29,13 +29,9 @@ export function BracketPage() {
 
   if (!tournament) return <div className="center-state">{error ?? "正在读取完整对阵…"}</div>;
 
-  const currentRound = tournament.progress.rounds[tournament.progress.currentRoundIndex];
-  const entrants = currentRound ? currentRound.matches.length * 2 : 0;
   const returnPath = tournament.progress.status === "finished"
     ? `/t/${id}/result${window.location.hash}`
-    : entrants <= 4
-      ? `/t/${id}/final${window.location.hash}`
-      : `/t/${id}/play${window.location.hash}`;
+    : `/t/${id}/play${window.location.hash}`;
 
   return (
     <div className="app-shell bracket-shell">

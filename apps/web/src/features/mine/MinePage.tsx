@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Clock3, Link2, LogOut, Play, Trophy, UserRound } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import type { CloudTournament } from "@song-world-cup/domain";
+import { appRelativePath } from "../../app/paths";
 import { AppHeader } from "../../components/AppHeader";
 import { listCachedTournaments } from "../tournament/repository";
 import { getAccountTournaments, logout, mockLogin } from "../auth/api";
@@ -62,10 +63,11 @@ export function MinePage() {
     setError(null);
     try {
       const url = new URL(recoveryLink, window.location.origin);
-      if (url.origin !== window.location.origin || !/^\/t\/[^/]+\/(play|result)$/.test(url.pathname)) {
+      const routePath = appRelativePath(url.pathname);
+      if (url.origin !== window.location.origin || !routePath || !/^\/t\/[^/]+\/(play|result)$/.test(routePath)) {
         throw new Error("请输入本站赛事恢复链接");
       }
-      navigate(`${url.pathname}${url.hash}`);
+      navigate(`${routePath}${url.hash}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "恢复链接无效");
     }

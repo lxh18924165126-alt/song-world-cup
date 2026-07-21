@@ -2,7 +2,7 @@
 
 ## 功能范围与用户入口
 
-- `/` 接收 QQ 音乐或网易云音乐公开歌单链接，先在浏览器识别平台并校验链接，再调用 Worker 解析。
+- `/` 仅保留歌单导入主流程，接收 QQ 音乐或网易云音乐公开歌单链接，先在浏览器识别平台并校验链接，再调用 Worker 解析。
 - 导入成功后同时写入 D1 不可变快照和设备 IndexedDB，随后进入 `/import/check`。
 - 歌曲检查支持按歌名/歌手搜索、单条排除、批量全选/取消及恢复全部；重复歌曲按歌单原位置保持为独立条目，确认后进入 `/setup`。
 - QQ 音乐服务端解析不可用时，前端自动改用 QQ Musicu JSONP 接口；网易云音乐仅走服务端解析。显式参数错误和对应平台导入开关关闭时不触发备用路径。
@@ -13,6 +13,7 @@
 - `apps/web/src/features/import/SongCheckPage.tsx`：搜索、选择与排除交互。
 - `apps/web/src/features/import/api.ts`：服务端优先客户端、JSONP 备用请求、脚本清理与超时控制。
 - `apps/web/src/features/import/repository.ts`：IndexedDB 中的快照与独立赛事草稿。
+- `apps/web/src/app/id.ts`：安全上下文使用原生 UUID，公网 HTTP 非安全上下文以 `crypto.getRandomValues` 生成 RFC 4122 v4 UUID。
 - `apps/api/src/index.ts`：Worker 路由和错误映射。
 - `apps/api/src/qq-music.ts`：无 Cookie 请求 QQ 音乐公开歌单并规范化响应。
 - `apps/api/src/netease-cloud-music.ts`：无 Cookie 请求网易云音乐官方域名的公开歌单元数据，并分批补齐普通用户歌单的歌曲详情。
@@ -43,6 +44,7 @@
 - IndexedDB 内快照和赛事草稿分表，排除或恢复歌曲不会改写原始歌单快照。
 - JSONP 脚本显式禁用 Referer，完成或超时后删除脚本、全局回调和计时器，避免重复导入残留。
 - 网易云音乐没有浏览器备用路径；服务端不可用时保留明确错误，不把只返回少量内嵌歌曲的响应保存为不完整快照。
+- 两个平台在服务端成功后都要创建本地草稿；公网 HTTP 入口缺少 `crypto.randomUUID` 时统一使用加密随机备用实现。QQ 浏览器 JSONP 的回调名与本地快照 ID 复用同一实现，不以 `Math.random` 降级。
 - 浏览器上传的快照不信任客户端 ID、媒体 URL、试听 URL或导入时间；这些字段全部由 Worker 重建。备用导入断网时可完成检查和设置，恢复联网后才能提升快照并创建云端草稿。
 - `public/sw.js` 为生产构建提供同源静态资源缓存和离线导航壳；赛事离线事件队列见独立功能说明。
 
@@ -51,6 +53,7 @@
 - `pnpm test`：双平台链接解析、网易云分批补齐、重复歌曲、不可识别条目以及赛事规模/抽签领域规则测试。
 - `pnpm typecheck`：共享包、Web 与 Worker 类型检查。
 - `pnpm build`：Vite 生产构建、共享包编译与 Wrangler dry-run。
+- Web 单元测试覆盖原生 `randomUUID` 与公网 HTTP 缺失该方法时的 RFC 4122 v4 备用路径。
 - `pnpm db:migrate:local`：本地 D1 迁移。
 - 启动 `pnpm dev` 后，用两个平台的公开歌单分别调用导入 API，可核对 `playlist_snapshots`、`snapshot_songs` 与来源平台；浏览器断开 Worker 后，QQ 链接应自动通过 JSONP 进入 `/import/check`，网易云链接应明确提示服务端不可用。QQ 备用路径已用歌单 `7052783065` 实测导入 1243 首歌曲。
 - 本次在隔离 D1 与本地 Worker 中实测：普通网易云歌单 `6819106603` 从只内嵌少量详情的响应补齐并保存 91 首；短链接 `https://163cn.tv/Kzh05tW` 展开后保存 6 首，两次 Queue 均消费成功。`0011` 迁移前写入的 QQ 快照及 16 首歌曲在迁移后全部保留，外键检查无异常。

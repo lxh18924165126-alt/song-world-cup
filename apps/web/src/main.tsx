@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./app/App";
+import { appPath, routerBasename } from "./app/paths";
 import "./app/styles.css";
 
 const root = document.getElementById("root");
@@ -12,7 +13,7 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <App />
     </BrowserRouter>
   </StrictMode>,
@@ -20,7 +21,7 @@ createRoot(root).render(
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    navigator.serviceWorker.register(appPath("/sw.js")).catch(() => undefined);
   });
 }
 

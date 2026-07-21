@@ -1,4 +1,6 @@
 import { normalizeQqPlaylist, parsePlaylistReference, parseQqPlaylistId, type PlaylistSnapshot } from "@song-world-cup/domain";
+import { createUuid } from "../../app/id";
+import { appPath } from "../../app/paths";
 
 interface ResolvePlaylistResponse {
   snapshot: PlaylistSnapshot;
@@ -17,7 +19,7 @@ export async function resolvePlaylist(url: string): Promise<PlaylistSnapshot> {
   const parsed = parsePlaylistReference(url);
   let serverMessage = "服务端解析不可用";
   try {
-    const response = await fetch("/api/playlists/resolve", {
+    const response = await fetch(appPath("/api/playlists/resolve"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
@@ -45,14 +47,14 @@ export async function resolvePlaylistInBrowser(url: string): Promise<PlaylistSna
   const playlistId = parseQqPlaylistId(url);
   const payload = await musicuJsonp(playlistId);
   return normalizeQqPlaylist(payload, {
-    snapshotId: crypto.randomUUID(),
+    snapshotId: createUuid(),
     importedAt: new Date().toISOString(),
     storage: "local",
   });
 }
 
 export async function promoteBrowserSnapshot(snapshot: PlaylistSnapshot): Promise<PlaylistSnapshot> {
-  const response = await fetch("/api/playlists/browser-snapshot", {
+  const response = await fetch(appPath("/api/playlists/browser-snapshot"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ snapshot }),
@@ -66,7 +68,7 @@ export async function promoteBrowserSnapshot(snapshot: PlaylistSnapshot): Promis
 }
 
 function musicuJsonp(playlistId: string): Promise<unknown> {
-  const callbackName = `songWorldCupJsonp_${crypto.randomUUID().replaceAll("-", "")}`;
+  const callbackName = `songWorldCupJsonp_${createUuid().replaceAll("-", "")}`;
   const data = {
     comm: { ct: 24, cv: 0 },
     req_0: {

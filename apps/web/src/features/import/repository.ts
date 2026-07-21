@@ -1,11 +1,12 @@
 import type { PlaylistSnapshot, TournamentDraft } from "@song-world-cup/domain";
+import { createUuid } from "../../app/id";
 import { database } from "../../storage/database";
 
 const CURRENT_DRAFT_KEY = "song-world-cup:current-draft-id:v1";
 
 export async function createImportDraft(snapshot: PlaylistSnapshot): Promise<TournamentDraft> {
   const draft: TournamentDraft = {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     snapshotId: snapshot.id,
     name: `${snapshot.title} · 歌曲世界杯`.slice(0, 20),
     selectedSongIds: snapshot.songs.map((song) => song.id),

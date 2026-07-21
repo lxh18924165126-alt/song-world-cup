@@ -1,4 +1,5 @@
-import { Crown, Trophy } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Crown, Trophy } from "lucide-react";
 import {
   deriveTournamentResult,
   type CloudTournament,
@@ -14,6 +15,7 @@ export function ResultSummary({
   songs: SnapshotSong[];
   playlist?: { title: string; coverUrl: string | null };
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const result = deriveTournamentResult(tournament.progress);
   const songById = new Map(songs.map((song) => [song.id, song]));
   const champion = songById.get(result.championId);
@@ -37,14 +39,24 @@ export function ResultSummary({
         </div>
         <Trophy className="champion-trophy" aria-hidden="true" />
       </section>
-      <section className="result-podium">
-        <article className="surface"><span>亚军</span><strong>{runnerUp?.title ?? "—"}</strong><small>{runnerUp?.artists.join(" / ")}</small></article>
-        <article className="surface"><span>并列四强</span><strong>{semifinalists.map((song) => song?.title).join(" / ") || "—"}</strong><small>{semifinalists.map((song) => song?.artists.join(" / ")).join(" · ")}</small></article>
-      </section>
-      <section className="surface result-timeline">
-        <h2>完整赛果</h2>
-        <div>{tournament.progress.rounds.map((round, index) => <span key={round.index}>{index === tournament.progress.rounds.length - 1 ? "冠军" : `${2 ** (tournament.progress.rounds.length - index)} 强`}</span>)}</div>
-      </section>
+      <button
+        className="result-details-toggle"
+        type="button"
+        aria-expanded={detailsOpen}
+        aria-controls="complete-result-details"
+        onClick={() => setDetailsOpen((open) => !open)}
+      >
+        <span><strong>完整赛果</strong><small>亚军与并列四强</small></span>
+        <ChevronDown aria-hidden="true" />
+      </button>
+      {detailsOpen ? (
+        <div id="complete-result-details" className="result-details">
+          <section className="result-podium">
+            <article className="surface"><span>亚军</span><strong>{runnerUp?.title ?? "—"}</strong><small>{runnerUp?.artists.join(" / ")}</small></article>
+            <article className="surface"><span>并列四强</span><strong>{semifinalists.map((song) => song?.title).join(" / ") || "—"}</strong><small>{semifinalists.map((song) => song?.artists.join(" / ")).join(" · ")}</small></article>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -15,6 +15,11 @@
     "public:service:install": "bash scripts/install-public-access-service.sh",
     "public:refresh": "bash scripts/refresh-public-access.sh",
     "public:verify-cn": "bash scripts/verify-public-access-cn.sh",
+    "local:prepare": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-local-server.ps1",
+    "local:serve": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-server.ps1",
+    "local:start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-server-background.ps1",
+    "local:stop": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/stop-local-server.ps1",
+    "local:service:install": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-local-server-service-admin.ps1",
     "db:migrate:local": "pnpm --filter @song-world-cup/api db:migrate:local",
     "db:seed:e2e": "pnpm --filter @song-world-cup/api exec wrangler d1 execute song-world-cup --local --file ../../e2e/fixtures/seed.sql"
   },

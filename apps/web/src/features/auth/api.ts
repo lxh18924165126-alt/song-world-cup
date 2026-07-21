@@ -1,4 +1,5 @@
 import type { CloudTournament } from "@song-world-cup/domain";
+import { appPath } from "../../app/paths";
 import {
   clearStoredSession,
   getStoredSession,
@@ -76,7 +77,7 @@ export async function getAccountTournaments() {
 }
 
 async function request<T = unknown>(url: string, init: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await fetch(appPath(url), init);
   const body = await response.json().catch(() => ({})) as T | { error?: { message?: string } };
   if (!response.ok) throw new Error((body as { error?: { message?: string } }).error?.message ?? "账户操作失败");
   return body as T;
